@@ -23,3 +23,7 @@ test:
 production:
   <<: *default
   database: db/production.sqlite3
+
+continous_integration:
+  <<: *default
+  database: db/production.sqlite3
