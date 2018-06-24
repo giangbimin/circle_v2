@@ -52,8 +52,10 @@ jobs:
       - run:
           name: Setup Rails Database
           command: |
-            RAILS_ENV=continous_integration bundle exec rake db:drop
-            RAILS_ENV=continous_integration bundle exec rake db:setup
+            RAILS_ENV=continous_integration bundle exec rails db:drop
+            RAILS_ENV=continous_integration bundle exec rails db:create
+            RAILS_ENV=continous_integration bundle exec rails db:migrate
+            RAILS_ENV=continous_integration bundle exec rails db:reset
 
       - run:
           name: Run Brakeman
