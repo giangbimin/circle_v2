@@ -2,78 +2,157 @@
 #
 # Check https://circleci.com/docs/2.0/language-ruby/ for more details
 #
+#
+defaults: &defaults
+  working_directory: ~/circleci
+  docker:
+    - image: circleci/ruby:2.5.0-node-browsers
+      environment:
+        RAILS_ENV: continous_integration
+        PGHOST: 127.0.0.1
+        PGUSER: rails_test_user
+
+bundle_dependencies_env: &bundle_dependencies_env:
+  steps:
+    - checkout
+    - attach_workspace:
+        at: ~/circleci
+    - restore_cache:
+        keys:
+        - v1-dependencies-{{ checksum "Gemfile.lock" }}
+    - run:
+        name: Setup Bundler and Gems
+        command: |
+          bundle install --jobs=4 --retry=3 --path vendor/bundle
+
+    - save_cache:
+        key: v1-dependencies-{{ checksum "Gemfile.lock" }}
+        paths:
+          - ~/circleci/vendor/bundle
+    - persist_to_workspace:
+        root: .
+        paths: vendor/bundle
+
+rails_test_env: &rails_test_env
+  steps:
+    - checkout
+
+    - attach_workspace:
+        at: ~/circleci
+
+    - run: bundle --path vendor/bundle
+
+    - run:
+        name: Init test-results and create env
+        command: |
+          cp .env.sample .env
+          mkdir ./test-results
+
+    - run:
+        name: Reek
+        command: reek .
+    # - run: reek --format html > ./test-results/reek.html
+
+    - run:
+       name: Rubocop
+       command: rubocop --rails
+    # - run: rubocop --config .rubocop.yml --no-color --rails --out ./test-results/rubocop.xml
+
+    - run:
+        name: Run Brakeman
+        command: brakeman
+    # - run: brakeman -o ./test-results/brakeman.html -o ./test-results/brakeman.json
+
+    - run:
+        name: Run rails_best_practices
+        command:  rails_best_practices
+    # - run: rails_best_practices --format xml --output-file ./test-results/rails_best_practices.xml
+
+    - run: dockerize -wait tcp://localhost:5432 -timeout 1m
+    - run:
+        name: Setup Rails Database
+        command: |
+          bundle exec rake db:create
+          bundle exec rake db:schema:load
+
+    - run:
+        name: run tests
+        command: |
+          bundle exec rspec -r rspec_junit_formatter --format RspecJunitFormatter -o ./test-results/rspec.xml
+        when: always
+
+    # collect Flitr_backend test results
+    - store_test_results:
+        path: ./test-results
+
+    - store_artifacts:
+        path: ./test-results
+        destination: test-results
+
+precompile_assets_env: &precompile_assets_env
+  steps:
+    - checkout
+    - attach_workspace:
+        at: ~/circleci
+    - run: bundle --path vendor/bundle
+    - run:
+        name: Precompile assets
+        command: bundle exec rails assets:precompile
+    - persist_to_workspace:
+        root: .
+        paths: public/assets
+
+deploy_heroku_staging_env: &deploy_heroku_staging_env
+  machine:
+      enabled: true
+  working_directory: ~/circleci
+  environment:
+    HEROKU_APP: "staging-filtr"
+  steps:
+    - checkout
+    - run:
+        name: Deploy Master to Heroku
+        command: |
+          git push --force https://heroku:$HEROKU_API_KEY@git.heroku.com/$HEROKU_APP.git HEAD:refs/heads/master
+
+deploy_aws_production_env: &deploy_aws_production_env
+  steps:
+    - checkout
+    - attach_workspace:
+        at: ~/circleci
+    - run: bundle --path vendor/bundle
+    - run:
+        command: bundle exec cap production deploy
+
 version: 2
 jobs:
-  build:
-    working_directory: ~/circle_v2
-    docker:
-      - image: circleci/ruby:2.5.0-node-browsers
-        environment:
-          RAILS_ENV: continous_integration
-          PGHOST: 127.0.0.1
-          PGUSER: rails_test_user
+  bundle_dependencies:
+    <<: *defaults
+    <<: *bundle_dependencies_env
 
-      - image: circleci/postgres:10.4-alpine
-        environment:
-          POSTGRES_USER: rails_test_user
-          POSTGRES_PASSWORD: ""
-          POSTGRES_DB: continous_integration
+  rails_test:
+    <<: *defaults
+    <<: *rails_test_env
+   
+  precompile_assets:
+    <<: *defaults
+    <<: *precompile_assets_env
+    
+  deploy_heroku_staging:
+    <<: *deploy_heroku_staging_env
 
-    steps:
-      - checkout
+  deploy_aws_production:
+    <<: *defaults
+    <<: *deploy_aws_production_env
 
-      - restore_cache:
-          keys:
-            - myemergencycontactnumber-api-{{ checksum "Gemfile.lock" }}
-            - myemergencycontactnumber-api-
+  all_step_by_one:
+    <<: *defaults
+    <<: *bundle_dependencies_env
+    <<: *rails_test_env
+    <<: *precompile_assets_env
 
-      - save_cache:
-          key: rails-demo-{{ checksum "Gemfile.lock" }}
-          paths:
-            - vendor/bundle
-
-      - run:
-          name: Setup Bundler and Gems
-          command: |
-            mkdir /tmp/test-results
-            gem install bundler
-            gem update bundler
-            gem install brakeman
-            gem install rubocop
-            gem install rubocop-rspec
-            bundle config without development:test
-            bundle check --path=vendor/bundle || bundle install --without development test --path=vendor/bundle --jobs 4 --retry 3
-
-      - run:
-          name: Setup Postgres
-          command: |
-            sudo apt-get install postgresql-client
-
-      - run:
-          name: Setup Rails Database
-          command: |
-            RAILS_ENV=continous_integration bundle exec rails db:drop
-            RAILS_ENV=continous_integration bundle exec rails db:create
-            RAILS_ENV=continous_integration bundle exec rails db:migrate
-            RAILS_ENV=continous_integration bundle exec rails db:reset
-
-      - run:
-          name: Run Brakeman
-          command: |
-            RAILS_ENV=continous_integration brakeman -z
-
-      - run:
-          name: Run Rubocop
-          command: |
-            RAILS_ENV=continous_integration bundle exec rubocop --format fuubar --require rubocop-rspec --config .rubocop.yml
-
-      - run:
-          name: Run Rspec
-          command: |
-            RAILS_ENV=continous_integration bundle exec rspec --format RspecJunitFormatter -o /tmp/test-results/rspec.xml
-
-      - store_test_results:
-          path: /tmp/test-results
-      - store_artifacts:
-          path: /tmp/test-results
-          destination: test-results
+workflows:
+  version: 2
+  test-and-deploy:
+    jobs:
+      - all_step_by_one
