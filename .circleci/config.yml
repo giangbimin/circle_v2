@@ -15,7 +15,7 @@ defaults: &defaults
 
 version: 2
 jobs:
-  build:
+  run_test:
     <<: *defaults
     steps:
       - checkout
@@ -46,8 +46,8 @@ jobs:
           when: always
 
       - run:
-         name: Rubocop
-         command: rubocop --rails
+          name: Rubocop
+          command: rubocop --rails
           when: always
 
       - run:
@@ -58,7 +58,6 @@ jobs:
       - run:
           name: Run rails_best_practices
           command:  rails_best_practices
-          when: always
 
       - run: 
           name: Setup Database timeout
@@ -107,4 +106,5 @@ workflows:
   version: 2
   test-and-deploy:
     jobs:
-      - rails_test
+      - run_test
+      - deploy_heroku_staging_env:
