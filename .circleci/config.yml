@@ -89,24 +89,24 @@ jobs:
           name: Precompile assets
           command: bundle exec rails assets:precompile
 
-  deploy_heroku_staging_env:
-    machine:
-        enabled: true
-    working_directory: ~/circleci_v2
-    environment:
-      HEROKU_APP: "staging-filtr"
-    steps:
-      - checkout
-      - run:
-          name: Deploy Master to Heroku
-          command: |
-            git push --force https://heroku:$HEROKU_API_KEY@git.heroku.com/$HEROKU_APP.git HEAD:refs/heads/master
+  # deploy_heroku_staging_env:
+  #   machine:
+  #       enabled: true
+  #   working_directory: ~/circleci_v2
+  #   environment:
+  #     HEROKU_APP: "staging-filtr"
+  #   steps:
+  #     - checkout
+  #     - run:
+  #         name: Deploy Master to Heroku
+  #         command: |
+  #           git push --force https://heroku:$HEROKU_API_KEY@git.heroku.com/$HEROKU_APP.git HEAD:refs/heads/master
 
 workflows:
   version: 2
   test-and-deploy:
     jobs:
       - run_test
-      - deploy_heroku_staging_env:
-        requires:
-            - run_test
+      # - deploy_heroku_staging_env:
+      #   requires:
+      #       - run_test
