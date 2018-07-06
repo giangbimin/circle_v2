@@ -1,5 +1,5 @@
 AllCops:
-  TargetRubyVersion: 2.1
+  TargetRubyVersion: 2.5
 
   Exclude:
     - 'db/**/*'
@@ -10,10 +10,21 @@ AllCops:
     - 'Procfile'
     - 'bin/*'
     - 'vendor/**/*'
+    - 'Gemfile'
+    - 'Rakefile'
+    - 'Guardfile'
+    - 'config.ru'
+    - 'spec/*_helper.rb'
 Documentation:
   # Skips checking to make sure top level modules / classes have a comment.
   Enabled: false
-
+Metrics/LineLength:
+  # This will disable the rule completely, regardless what other options you put
+  Enabled: false
+Layout/TrailingWhitespace:
+  Enabled: false
+Style/FrozenStringLiteralComment:
+  Enabled: false
 Style/ClassAndModuleChildren:
   # Skips checking the style of children definitions at classes and modules.
   #

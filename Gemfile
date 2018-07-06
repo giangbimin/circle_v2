@@ -54,6 +54,10 @@ group :development do
   gem 'faker'
   gem 'rspec-rails', '~> 3.7'
   gem 'factory_bot_rails'
+  gem 'rails_best_practices', '~> 1.19', '>= 1.19.2', require: false
+  gem 'reek', '~> 4.8', '>= 4.8.1'
+  gem 'rubocop', '~> 0.57.2'
+  gem 'brakeman', '~> 4.3', '>= 4.3.1', require: false
 end
 
 group :test do
@@ -66,6 +70,7 @@ group :test do
   gem 'selenium-webdriver'
   # Easy installation and use of chromedriver to run system tests with Chrome
   gem 'chromedriver-helper'
+  gem 'rspec_junit_formatter'
 end
 
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
