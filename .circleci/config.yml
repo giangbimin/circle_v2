@@ -12,22 +12,11 @@ defaults: &defaults
         PGHOST: 127.0.0.1
         PGUSER: rails_test_user
 
-deploy_heroku_staging_env: &deploy_heroku_staging_env
-  machine:
-      enabled: true
-  working_directory: ~/circleci_v2
-  environment:
-    HEROKU_APP: "staging-filtr"
-  steps:
-    - checkout
-    - run:
-        name: Deploy Master to Heroku
-        command: |
-          git push --force https://heroku:$HEROKU_API_KEY@git.heroku.com/$HEROKU_APP.git HEAD:refs/heads/master
 
 version: 2
 jobs:
-  rails_test:
+  build:
+    parallelism: 3
     <<: *defaults
     steps:
       - checkout
@@ -55,25 +44,34 @@ jobs:
       - run:
           name: Reek
           command: reek .
+          when: always
 
       - run:
          name: Rubocop
          command: rubocop --rails
+          when: always
 
       - run:
           name: Run Brakeman
           command: brakeman
+          when: always
 
       - run:
           name: Run rails_best_practices
           command:  rails_best_practices
+          when: always
 
-      - run: dockerize -wait tcp://localhost:5432 -timeout 1m
+      - run: 
+          name: Setup Database timeout
+          command: dockerize -wait tcp://localhost:5432 -timeout 1m
+          when: always
+
       - run:
           name: Setup Rails Database
           command: |
             bundle exec rake db:create
             bundle exec rake db:schema:load
+          when: always
 
       - run:
           name: run tests
@@ -92,6 +90,19 @@ jobs:
       - run:
           name: Precompile assets
           command: bundle exec rails assets:precompile
+
+  deploy_heroku_staging_env:
+    machine:
+        enabled: true
+    working_directory: ~/circleci_v2
+    environment:
+      HEROKU_APP: "staging-filtr"
+    steps:
+      - checkout
+      - run:
+          name: Deploy Master to Heroku
+          command: |
+            git push --force https://heroku:$HEROKU_API_KEY@git.heroku.com/$HEROKU_APP.git HEAD:refs/heads/master
 
 workflows:
   version: 2
