@@ -1,4 +1,4 @@
-# Ruby circleci_v2 2.0 configuration file
+# Ruby circleci 2.0 configuration file
 #
 # Check https://circleci_v2.com/docs/2.0/language-ruby/ for more details
 #
@@ -6,7 +6,7 @@
 defaults: &defaults
   working_directory: ~/circleci_v2
   docker:
-    - image: circleci_v2/ruby:2.5.0-node-browsers
+    - image: circleci/ruby:2.5.0-node-browsers
       environment:
         RAILS_ENV: continous_integration
         PGHOST: 127.0.0.1
