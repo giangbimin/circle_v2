@@ -16,7 +16,6 @@ defaults: &defaults
 version: 2
 jobs:
   build:
-    parallelism: 3
     <<: *defaults
     steps:
       - checkout
